@@ -1,0 +1,5 @@
+.codex-cubeide-workspace/
+
+# STM32CubeIDE build outputs
+**/Debug/
+**/Release/
