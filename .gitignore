@@ -3,3 +3,6 @@
 # STM32CubeIDE build outputs
 **/Debug/
 **/Release/
+
+# STM32CubeIDE local generated settings
+firmware/STM32CubeIDE/PMU/.settings/language.settings.xml
