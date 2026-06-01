@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "MT48LC32M16.h"
+#include "debug_log.h"
+#include "debug_system_info.h"
 #include "net_config.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -113,35 +115,136 @@ static void MX_SPI6_Init(void);
 
 #define SDRAM_BANK1_BASE 0xC0000000UL
 #define SDRAM_BANK2_BASE 0xD0000000UL
-#define SDRAM_TEST_WORDS 8U
+#define SDRAM_TEST_BANK_SIZE SDRAM_BANK_SIZE
+#define SDRAM_TEST_CONTIGUOUS_SIZE (1024U * 1024U)
+#define SDRAM_TEST_CACHE_LINE_SIZE 32U
+#define SDRAM_TEST_TASK_STACK_SIZE 512U
+#define SDRAM_TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1U)
+
+typedef enum
+{
+  SDRAM_TEST_NOT_STARTED = 0,
+  SDRAM_TEST_RUNNING,
+  SDRAM_TEST_PASSED,
+  SDRAM_TEST_FAILED_BANK1,
+  SDRAM_TEST_FAILED_BANK2,
+  SDRAM_TEST_TASK_CREATE_FAILED
+} SdramTestStatus;
+
+volatile uint32_t gSdramTestStatus = SDRAM_TEST_NOT_STARTED;
+volatile uint32_t gSdramTestFailAddress = 0;
+volatile uint32_t gSdramTestExpected = 0;
+volatile uint32_t gSdramTestActual = 0;
+volatile uint32_t gSdramTestPassCount = 0;
+
+static void SDRAM_CleanInvalidateDCache(uint32_t address, uint32_t size)
+{
+  uint32_t start = address & ~(SDRAM_TEST_CACHE_LINE_SIZE - 1U);
+  uint32_t end = (address + size + SDRAM_TEST_CACHE_LINE_SIZE - 1U) &
+      ~(SDRAM_TEST_CACHE_LINE_SIZE - 1U);
+
+  SCB_CleanDCache_by_Addr((uint32_t *) start, (int32_t) (end - start));
+  SCB_InvalidateDCache_by_Addr((uint32_t *) start, (int32_t) (end - start));
+}
+
+static HAL_StatusTypeDef SDRAM_CheckWord(volatile uint32_t *memory,
+    uint32_t expected)
+{
+  uint32_t actual = *memory;
+
+  if (actual != expected)
+  {
+    gSdramTestFailAddress = (uint32_t) memory;
+    gSdramTestExpected = expected;
+    gSdramTestActual = actual;
+    return HAL_ERROR;
+  }
+
+  return HAL_OK;
+}
 
 static HAL_StatusTypeDef SDRAM_TestBank(uint32_t baseAddress)
 {
-  static const uint32_t pattern[SDRAM_TEST_WORDS] =
-  {
-    0x00000000UL, 0xFFFFFFFFUL, 0xAAAAAAAAUL, 0x55555555UL,
-    0x12345678UL, 0x87654321UL, 0xA5A5A5A5UL, 0x5A5A5A5AUL
-  };
   volatile uint32_t *memory = (volatile uint32_t *) baseAddress;
+  uint32_t contiguousWords = SDRAM_TEST_CONTIGUOUS_SIZE / sizeof(uint32_t);
+  uint32_t bankWords = SDRAM_TEST_BANK_SIZE / sizeof(uint32_t);
   uint32_t i;
 
-  for (i = 0; i < SDRAM_TEST_WORDS; i++)
+  for (i = 0; i < contiguousWords; i++)
   {
-    memory[i] = pattern[i];
+    memory[i] = 0xA5A50000UL ^ i ^ baseAddress;
   }
 
-  SCB_CleanDCache_by_Addr((uint32_t *) memory, SDRAM_TEST_WORDS * sizeof(uint32_t));
-  SCB_InvalidateDCache_by_Addr((uint32_t *) memory, SDRAM_TEST_WORDS * sizeof(uint32_t));
+  SDRAM_CleanInvalidateDCache(baseAddress, SDRAM_TEST_CONTIGUOUS_SIZE);
 
-  for (i = 0; i < SDRAM_TEST_WORDS; i++)
+  for (i = 0; i < contiguousWords; i++)
   {
-    if (memory[i] != pattern[i])
+    if (SDRAM_CheckWord(&memory[i], 0xA5A50000UL ^ i ^ baseAddress) != HAL_OK)
     {
       return HAL_ERROR;
     }
   }
 
+  for (i = 0; i < bankWords; i += 1024U)
+  {
+    memory[i] = 0x5A5A0000UL ^ i ^ baseAddress;
+    SDRAM_CleanInvalidateDCache((uint32_t) &memory[i], sizeof(memory[i]));
+  }
+
+  memory[bankWords - 1U] = 0x12345678UL ^ baseAddress;
+  SDRAM_CleanInvalidateDCache((uint32_t) &memory[bankWords - 1U],
+      sizeof(memory[bankWords - 1U]));
+
+  for (i = 0; i < bankWords; i += 1024U)
+  {
+    if (SDRAM_CheckWord(&memory[i], 0x5A5A0000UL ^ i ^ baseAddress) != HAL_OK)
+    {
+      return HAL_ERROR;
+    }
+  }
+
+  if (SDRAM_CheckWord(&memory[bankWords - 1U], 0x12345678UL ^ baseAddress) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
   return HAL_OK;
+}
+
+static void SDRAM_TestTask(void *argument)
+{
+  (void) argument;
+
+  gSdramTestStatus = SDRAM_TEST_RUNNING;
+
+  if (SDRAM_TestBank(SDRAM_BANK1_BASE) != HAL_OK)
+  {
+    gSdramTestStatus = SDRAM_TEST_FAILED_BANK1;
+    DBG_ERROR("SDRAM bank1 failed at 0x%08lX: expected 0x%08lX, actual 0x%08lX\r\n",
+        (unsigned long) gSdramTestFailAddress,
+        (unsigned long) gSdramTestExpected,
+        (unsigned long) gSdramTestActual);
+    vTaskDelete(NULL);
+  }
+
+  if (SDRAM_TestBank(SDRAM_BANK2_BASE) != HAL_OK)
+  {
+    gSdramTestStatus = SDRAM_TEST_FAILED_BANK2;
+    DBG_ERROR("SDRAM bank2 failed at 0x%08lX: expected 0x%08lX, actual 0x%08lX\r\n",
+        (unsigned long) gSdramTestFailAddress,
+        (unsigned long) gSdramTestExpected,
+        (unsigned long) gSdramTestActual);
+    vTaskDelete(NULL);
+  }
+
+  gSdramTestPassCount++;
+  gSdramTestStatus = SDRAM_TEST_PASSED;
+  DBG_INFO("SDRAM test passed\r\n");
+
+  for (;;)
+  {
+    vTaskDelay(pdMS_TO_TICKS(5000U));
+  }
 }
 
 /* USER CODE END 0 */
@@ -198,18 +301,25 @@ int main(void)
   MX_I2C4_Init();
   MX_SPI6_Init();
   /* USER CODE BEGIN 2 */
-//  MT48LC32M16_Init(&hsdram1, FMC_SDRAM_CMD_TARGET_BANK1_2);
-//
-//  if ((SDRAM_TestBank(SDRAM_BANK1_BASE) != HAL_OK) ||
-//      (SDRAM_TestBank(SDRAM_BANK2_BASE) != HAL_OK))
-//  {
-//    Error_Handler();
-//  }
+  MT48LC32M16_Init(&hsdram1, FMC_SDRAM_CMD_TARGET_BANK1_2);
+  DBG_INFO("SDRAM init done\r\n");
+
+  if (xTaskCreate(SDRAM_TestTask, "sdram_test", SDRAM_TEST_TASK_STACK_SIZE,
+      NULL, SDRAM_TEST_TASK_PRIORITY, NULL) != pdPASS)
+  {
+    gSdramTestStatus = SDRAM_TEST_TASK_CREATE_FAILED;
+    DBG_ERROR("SDRAM test task create failed\r\n");
+    Error_Handler();
+  }
 
   if (net_tcp_init("PMU") != NO_ERROR)
   {
+    DBG_ERROR("CycloneTCP init failed\r\n");
     Error_Handler();
   }
+
+  DBG_INFO("CycloneTCP init done\r\n");
+  debugSystemInfoPrint();
 
   vTaskStartScheduler();
 
@@ -1171,7 +1281,7 @@ void MPU_Config(void)
   MPU_InitStruct.Number = MPU_REGION_NUMBER1;
   MPU_InitStruct.BaseAddress = 0x24000000;
   MPU_InitStruct.Size = MPU_REGION_SIZE_512KB;
-  MPU_InitStruct.SubRegionDisable = 0x0;
+  MPU_InitStruct.SubRegionDisable = 0xE0;
   MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
   MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
   MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
@@ -1184,6 +1294,7 @@ void MPU_Config(void)
   MPU_InitStruct.Number = MPU_REGION_NUMBER2;
   MPU_InitStruct.BaseAddress = 0x30000000;
   MPU_InitStruct.Size = MPU_REGION_SIZE_32KB;
+  MPU_InitStruct.SubRegionDisable = 0x0;
   MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
   MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
@@ -1199,6 +1310,7 @@ void MPU_Config(void)
   MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
   MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
   MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_BUFFERABLE;
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);
 

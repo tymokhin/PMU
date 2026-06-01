@@ -43,7 +43,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define MEM_TRACE_LEVEL 0
+#define MEM_TRACE_LEVEL 2
 
 // <o>NIC Trace level
 // <i>Set the desired debugging level
@@ -54,7 +54,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define NIC_TRACE_LEVEL 0
+#define NIC_TRACE_LEVEL 3
 
 // <o>Ethernet Trace level
 // <i>Set the desired debugging level
@@ -65,7 +65,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define ETH_TRACE_LEVEL 0
+#define ETH_TRACE_LEVEL 3
 
 // <o>ARP Trace level
 // <i>Set the desired debugging level
@@ -76,7 +76,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define ARP_TRACE_LEVEL 0
+#define ARP_TRACE_LEVEL 3
 
 // <o>IP Trace level
 // <i>Set the desired debugging level
@@ -87,7 +87,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define IP_TRACE_LEVEL 0
+#define IP_TRACE_LEVEL 3
 
 // <o>IPv4 Trace level
 // <i>Set the desired debugging level
@@ -98,7 +98,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define IPV4_TRACE_LEVEL 0
+#define IPV4_TRACE_LEVEL 3
 
 // <o>IPv6 Trace level
 // <i>Set the desired debugging level
@@ -120,7 +120,18 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define ICMP_TRACE_LEVEL 0
+#define ICMP_TRACE_LEVEL 3
+
+// <o>Ping Trace level
+// <i>Set the desired debugging level
+// <i>Default: Error
+// <0=>Off
+// <1=>Fatal
+// <2=>Error
+// <3=>Warning
+// <4=>Info
+// <5=>Debug
+#define PING_TRACE_LEVEL 3
 
 // <o>IGMP Trace level
 // <i>Set the desired debugging level
@@ -186,7 +197,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define UDP_TRACE_LEVEL 0
+#define UDP_TRACE_LEVEL 3
 
 // <o>TCP Trace level
 // <i>Set the desired debugging level
@@ -197,7 +208,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define TCP_TRACE_LEVEL 0
+#define TCP_TRACE_LEVEL 3
 
 // <o>Socket Trace level
 // <i>Set the desired debugging level
@@ -208,7 +219,7 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define SOCKET_TRACE_LEVEL 0
+#define SOCKET_TRACE_LEVEL 3
 
 // <o>Raw socket Trace level
 // <i>Set the desired debugging level
@@ -230,7 +241,18 @@ error_t net_tcp_init(char_t* hostname);
 // <3=>Warning
 // <4=>Info
 // <5=>Debug
-#define BSD_SOCKET_TRACE_LEVEL 0
+#define BSD_SOCKET_TRACE_LEVEL 3
+
+// <o>Echo Trace level
+// <i>Set the desired debugging level
+// <i>Default: Error
+// <0=>Off
+// <1=>Fatal
+// <2=>Error
+// <3=>Warning
+// <4=>Info
+// <5=>Debug
+#define ECHO_TRACE_LEVEL 3
 
 // <o>WebSocket Trace level
 // <i>Set the desired debugging level

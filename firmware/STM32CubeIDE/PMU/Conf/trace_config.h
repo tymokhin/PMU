@@ -8,6 +8,8 @@
 #ifndef TRACE_CONFIG_H_
 #define TRACE_CONFIG_H_
 
+#include "debug_log.h"
+
 /* ************************** <Trace Section> ****************************************************************** */
 
 //#ifdef DEBUG
@@ -33,7 +35,7 @@
 #endif
 
 #if CYCLONE_TRACE_ENABLE == 1 //Cyclone section
-#define TRACE_PRINTF(...) {vTaskSuspendAll(); fprintf(stderr, __VA_ARGS__); xTaskResumeAll();}
+#define TRACE_PRINTF(...) DEBUG_LOG_PRINTF(__VA_ARGS__)
 #else
 #define TRACE_PRINTF(...)
 #endif
