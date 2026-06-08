@@ -161,7 +161,7 @@ files. */
 
 #endif /* __IAR_SYSTEMS_ASM__ */
 
-//#include "trcRecorder.h"
+#include "trcRecorder.h"
 
 /* The size of the global output buffer that is available for use when there
 are multiple command interpreters running at once (for example, one on a UART

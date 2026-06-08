@@ -121,131 +121,6 @@ static void MX_SPI6_Init(void);
 #define SDRAM_TEST_TASK_STACK_SIZE 512U
 #define SDRAM_TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1U)
 
-typedef enum
-{
-  SDRAM_TEST_NOT_STARTED = 0,
-  SDRAM_TEST_RUNNING,
-  SDRAM_TEST_PASSED,
-  SDRAM_TEST_FAILED_BANK1,
-  SDRAM_TEST_FAILED_BANK2,
-  SDRAM_TEST_TASK_CREATE_FAILED
-} SdramTestStatus;
-
-volatile uint32_t gSdramTestStatus = SDRAM_TEST_NOT_STARTED;
-volatile uint32_t gSdramTestFailAddress = 0;
-volatile uint32_t gSdramTestExpected = 0;
-volatile uint32_t gSdramTestActual = 0;
-volatile uint32_t gSdramTestPassCount = 0;
-
-static void SDRAM_CleanInvalidateDCache(uint32_t address, uint32_t size)
-{
-  uint32_t start = address & ~(SDRAM_TEST_CACHE_LINE_SIZE - 1U);
-  uint32_t end = (address + size + SDRAM_TEST_CACHE_LINE_SIZE - 1U) &
-      ~(SDRAM_TEST_CACHE_LINE_SIZE - 1U);
-
-  SCB_CleanDCache_by_Addr((uint32_t *) start, (int32_t) (end - start));
-  SCB_InvalidateDCache_by_Addr((uint32_t *) start, (int32_t) (end - start));
-}
-
-static HAL_StatusTypeDef SDRAM_CheckWord(volatile uint32_t *memory,
-    uint32_t expected)
-{
-  uint32_t actual = *memory;
-
-  if (actual != expected)
-  {
-    gSdramTestFailAddress = (uint32_t) memory;
-    gSdramTestExpected = expected;
-    gSdramTestActual = actual;
-    return HAL_ERROR;
-  }
-
-  return HAL_OK;
-}
-
-static HAL_StatusTypeDef SDRAM_TestBank(uint32_t baseAddress)
-{
-  volatile uint32_t *memory = (volatile uint32_t *) baseAddress;
-  uint32_t contiguousWords = SDRAM_TEST_CONTIGUOUS_SIZE / sizeof(uint32_t);
-  uint32_t bankWords = SDRAM_TEST_BANK_SIZE / sizeof(uint32_t);
-  uint32_t i;
-
-  for (i = 0; i < contiguousWords; i++)
-  {
-    memory[i] = 0xA5A50000UL ^ i ^ baseAddress;
-  }
-
-  SDRAM_CleanInvalidateDCache(baseAddress, SDRAM_TEST_CONTIGUOUS_SIZE);
-
-  for (i = 0; i < contiguousWords; i++)
-  {
-    if (SDRAM_CheckWord(&memory[i], 0xA5A50000UL ^ i ^ baseAddress) != HAL_OK)
-    {
-      return HAL_ERROR;
-    }
-  }
-
-  for (i = 0; i < bankWords; i += 1024U)
-  {
-    memory[i] = 0x5A5A0000UL ^ i ^ baseAddress;
-    SDRAM_CleanInvalidateDCache((uint32_t) &memory[i], sizeof(memory[i]));
-  }
-
-  memory[bankWords - 1U] = 0x12345678UL ^ baseAddress;
-  SDRAM_CleanInvalidateDCache((uint32_t) &memory[bankWords - 1U],
-      sizeof(memory[bankWords - 1U]));
-
-  for (i = 0; i < bankWords; i += 1024U)
-  {
-    if (SDRAM_CheckWord(&memory[i], 0x5A5A0000UL ^ i ^ baseAddress) != HAL_OK)
-    {
-      return HAL_ERROR;
-    }
-  }
-
-  if (SDRAM_CheckWord(&memory[bankWords - 1U], 0x12345678UL ^ baseAddress) != HAL_OK)
-  {
-    return HAL_ERROR;
-  }
-
-  return HAL_OK;
-}
-
-static void SDRAM_TestTask(void *argument)
-{
-  (void) argument;
-
-  gSdramTestStatus = SDRAM_TEST_RUNNING;
-
-  if (SDRAM_TestBank(SDRAM_BANK1_BASE) != HAL_OK)
-  {
-    gSdramTestStatus = SDRAM_TEST_FAILED_BANK1;
-    DBG_ERROR("SDRAM bank1 failed at 0x%08lX: expected 0x%08lX, actual 0x%08lX\r\n",
-        (unsigned long) gSdramTestFailAddress,
-        (unsigned long) gSdramTestExpected,
-        (unsigned long) gSdramTestActual);
-    vTaskDelete(NULL);
-  }
-
-  if (SDRAM_TestBank(SDRAM_BANK2_BASE) != HAL_OK)
-  {
-    gSdramTestStatus = SDRAM_TEST_FAILED_BANK2;
-    DBG_ERROR("SDRAM bank2 failed at 0x%08lX: expected 0x%08lX, actual 0x%08lX\r\n",
-        (unsigned long) gSdramTestFailAddress,
-        (unsigned long) gSdramTestExpected,
-        (unsigned long) gSdramTestActual);
-    vTaskDelete(NULL);
-  }
-
-  gSdramTestPassCount++;
-  gSdramTestStatus = SDRAM_TEST_PASSED;
-  DBG_INFO("SDRAM test passed\r\n");
-
-  for (;;)
-  {
-    vTaskDelay(pdMS_TO_TICKS(5000U));
-  }
-}
 
 /* USER CODE END 0 */
 
@@ -261,7 +136,7 @@ int main(void)
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
-  MPU_Config();
+  //MPU_Config();
 
   /* Enable the CPU Cache */
 
@@ -269,7 +144,7 @@ int main(void)
   SCB_EnableICache();
 
   /* Enable D-Cache---------------------------------------------------------*/
-  SCB_EnableDCache();
+  //SCB_EnableDCache();
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -289,7 +164,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_FMC_Init();
+  //MX_FMC_Init();
   MX_RTC_Init();
   MX_ETH_Init();
   MX_TIM5_Init();
@@ -301,16 +176,9 @@ int main(void)
   MX_I2C4_Init();
   MX_SPI6_Init();
   /* USER CODE BEGIN 2 */
-  MT48LC32M16_Init(&hsdram1, FMC_SDRAM_CMD_TARGET_BANK1_2);
-  DBG_INFO("SDRAM init done\r\n");
+  //MT48LC32M16_Init(&hsdram1, FMC_SDRAM_CMD_TARGET_BANK1_2);
+  //DBG_INFO("SDRAM init done\r\n");
 
-  if (xTaskCreate(SDRAM_TestTask, "sdram_test", SDRAM_TEST_TASK_STACK_SIZE,
-      NULL, SDRAM_TEST_TASK_PRIORITY, NULL) != pdPASS)
-  {
-    gSdramTestStatus = SDRAM_TEST_TASK_CREATE_FAILED;
-    DBG_ERROR("SDRAM test task create failed\r\n");
-    Error_Handler();
-  }
 
   if (net_tcp_init("PMU") != NO_ERROR)
   {
@@ -320,6 +188,10 @@ int main(void)
 
   DBG_INFO("CycloneTCP init done\r\n");
   debugSystemInfoPrint();
+
+#if defined(DEBUG)
+  vTraceEnable(TRC_START);
+#endif
 
   vTaskStartScheduler();
 
