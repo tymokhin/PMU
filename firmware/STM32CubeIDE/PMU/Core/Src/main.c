@@ -136,7 +136,7 @@ int main(void)
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
-  //MPU_Config();
+  MPU_Config();
 
   /* Enable the CPU Cache */
 
@@ -144,7 +144,7 @@ int main(void)
   SCB_EnableICache();
 
   /* Enable D-Cache---------------------------------------------------------*/
-  //SCB_EnableDCache();
+  SCB_EnableDCache();
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -164,7 +164,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  //MX_FMC_Init();
+  MX_FMC_Init();
   MX_RTC_Init();
   MX_ETH_Init();
   MX_TIM5_Init();
@@ -176,8 +176,8 @@ int main(void)
   MX_I2C4_Init();
   MX_SPI6_Init();
   /* USER CODE BEGIN 2 */
-  //MT48LC32M16_Init(&hsdram1, FMC_SDRAM_CMD_TARGET_BANK1_2);
-  //DBG_INFO("SDRAM init done\r\n");
+  MT48LC32M16_Init(&hsdram1, FMC_SDRAM_CMD_TARGET_BANK1_2);
+  DBG_INFO("SDRAM init done\r\n");
 
 
   if (net_tcp_init("PMU") != NO_ERROR)
@@ -190,7 +190,8 @@ int main(void)
   debugSystemInfoPrint();
 
 #if defined(DEBUG)
-  vTraceEnable(TRC_START);
+  //vTraceEnable(TRC_START);
+  vTraceEnable(TRC_INIT);
 #endif
 
   vTaskStartScheduler();

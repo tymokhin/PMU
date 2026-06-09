@@ -7,7 +7,7 @@
 #include <error.h>
 
 /* Fixed-size packet storage used by the TCP/IP stack. */
-#define NET_MEM_POOL_SUPPORT ENABLED
+#define NET_MEM_POOL_SUPPORT DISABLED
 #define NET_MEM_POOL_BUFFER_COUNT 64
 #define NET_MEM_POOL_BUFFER_SIZE 1536
 

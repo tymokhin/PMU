@@ -97,6 +97,7 @@ int32_t trcSocketSend( void* data, int32_t size, int32_t* bytesWritten )
   if (*bytesWritten==SOCKET_ERROR){
 	if (sock->errnoCode==0 || sock->errnoCode == EWOULDBLOCK) {
 	  *bytesWritten = 0;
+	  osDelayTask(TRC_CFG_CTRL_TASK_DELAY);
 	  return 0;
 	}
   }
