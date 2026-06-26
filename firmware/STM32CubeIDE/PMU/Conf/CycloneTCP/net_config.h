@@ -7,6 +7,7 @@
 #include <error.h>
 
 /* Fixed-size packet storage used by the TCP/IP stack. */
+//#define NET_MEM_POOL_SUPPORT ENABLED
 #define NET_MEM_POOL_SUPPORT DISABLED
 #define NET_MEM_POOL_BUFFER_COUNT 64
 #define NET_MEM_POOL_BUFFER_SIZE 1536
@@ -539,7 +540,7 @@ error_t net_tcp_init(char_t* hostname);
 // <i>Default buffer size for transmission
 // <i>Default: 2860
 // <576-65536>
-#define TCP_DEFAULT_TX_BUFFER_SIZE 2860
+#define TCP_DEFAULT_TX_BUFFER_SIZE 4096
 
 // <o>Default buffer size for reception
 // <i>Default buffer size for reception
@@ -562,7 +563,15 @@ error_t net_tcp_init(char_t* hostname);
 // <q>SACK support
 // <i>Enable selective acknowledgment support
 // <i>Default: Disabled
-#define TCP_SACK_SUPPORT 0
+// Enabled: without SACK a single loss forces Go-Back-N retransmission of the
+// whole window, which collapses throughput (worse with larger TX buffers).
+#define TCP_SACK_SUPPORT 1
+
+// Retransmission timeouts. Defaults (tcp.h) are 1000 ms, which turns any single
+// packet loss into a ~1 s stall that overflows the trace buffer. On a LAN the
+// RTT is sub-millisecond, so much shorter timeouts recover far faster.
+#define TCP_INITIAL_RTO 500
+#define TCP_MIN_RTO 200
 
 // </h>
 // <h>UDP

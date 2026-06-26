@@ -9,6 +9,9 @@
 #define ethNicDriver stm32h7xxEthDriver
 #define ethPhyDriver lan8720PhyDriver
 
+static StaticTask_t appNetTaskTcb;
+static StackType_t appNetTaskStack[NET_TASK_STACK_SIZE];
+
 static error_t ip_config_manual(const char_t *ip, const char_t *mask,
 	const char_t *gateway);
 
@@ -28,6 +31,10 @@ static error_t net_tcp_stack_init(void)
 	netGetDefaultSettings(&settings);
 	settings.interfaces = appNetInterfaces;
 	settings.numInterfaces = NET_INTERFACE_COUNT;
+
+	settings.task.tcb = &appNetTaskTcb;
+	settings.task.stack = appNetTaskStack;
+	settings.task.stackSize = NET_TASK_STACK_SIZE;
 
 	e = netInit(&appNetContext, &settings);
 	if(e)

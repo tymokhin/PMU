@@ -45,6 +45,29 @@
  * www.percepio.com
  ******************************************************************************/
 
+/*******************************************************************************
+ * PORT MODIFICATIONS (PMU project)
+ *
+ * This stream port is adapted to the CycloneTCP BSD socket API (instead of the
+ * lwIP reference implementation shipped by Percepio). The trace is streamed to
+ * the desktop Tracealyzer over TCP on port TRC_TCPIP_PORT (12000): the target
+ * acts as the listening server, the desktop connects and pulls the live trace.
+ *
+ * The accepted client socket is configured for low-latency, bounded-blocking
+ * streaming (see trcSocketAccept):
+ *   - SO_SNDTIMEO is set to the trace control task delay, so trcSocketSend()
+ *     blocks at most one control cycle when the TX window is full and then
+ *     reports "nothing sent yet" instead of busy-spinning.
+ *   - TCP_NODELAY disables Nagle. Trace pages are small (<=500 bytes) and
+ *     latency-sensitive; Nagle combined with the host's delayed-ACK otherwise
+ *     introduces ~40 ms stalls that overflow the recorder's page buffer and
+ *     produce gaps in the timeline.
+ *
+ * The remaining streaming stability comes from CycloneTCP / Tracealyzer config
+ * defines (SACK, RTO, TX buffer size, TzCtrl priority) - see Conf/. The root
+ * cause analysis is documented in NOTES.md.
+ ******************************************************************************/
+
 #include "trcRecorder.h"
 
 #if (TRC_CFG_RECORDER_MODE == TRC_RECORDER_MODE_STREAMING)  
@@ -63,7 +86,6 @@ int errno;
 static char is_inited = 0;
 
 int_t sock = -1, new_sd = -1;
-int_t flags = 0;
 int remoteSize;
 struct sockaddr_in address, remote;
 
@@ -76,32 +98,26 @@ int32_t trcSocketSend( void* data, int32_t size, int32_t* bytesWritten )
 	return -1;
 
   Socket* sock = &socketTable[new_sd];
-//  if (sock->errnoCode == EWOULDBLOCK) {
-//	if (fcntl( new_sd, F_GETFL, (void*)&flags)==SOCKET_SUCCESS){
-//	  flags &= ~O_NONBLOCK;
-//	  fcntl( new_sd, F_SETFL, (void*)&flags );
-//	}
-//  }
 
-  *bytesWritten = send( new_sd, data, size, MSG_DONTWAIT );
+  /* Blocking send, bounded by the SO_SNDTIMEO set in trcSocketAccept(). When
+     the TX window is momentarily full the call blocks for up to one control
+     task cycle, then returns SOCKET_ERROR with EWOULDBLOCK. */
+  *bytesWritten = send( new_sd, data, size, 0 );
 
-//  if (fcntl( new_sd, F_GETFL, (void*)&flags)==SOCKET_SUCCESS){
-//  	  flags |= O_NONBLOCK;
-//  	  fcntl( new_sd, F_SETFL, (void*)&flags );
-//  }
+  if (*bytesWritten > 0)
+    return 0;
 
-  if (*bytesWritten>0){
-	  return 0;
+  if (*bytesWritten == SOCKET_ERROR) {
+    if (sock->errnoCode == EWOULDBLOCK) {
+      /* Timed out with the peer still alive but slow: report zero bytes so the
+         recorder retries the same page on the next cycle. Not a fatal error. */
+      *bytesWritten = 0;
+      return 0;
+    }
   }
 
-  if (*bytesWritten==SOCKET_ERROR){
-	if (sock->errnoCode==0 || sock->errnoCode == EWOULDBLOCK) {
-	  *bytesWritten = 0;
-	  osDelayTask(TRC_CFG_CTRL_TASK_DELAY);
-	  return 0;
-	}
-  }
-  
+  /* Any other error means the connection is broken: drop the client socket so
+     trcSocketAccept() can take a fresh connection. */
   closesocket(new_sd);
   new_sd = -1;
   errno = -1;
@@ -170,6 +186,8 @@ int32_t trcSocketInitializeListener()
 
 int32_t trcSocketAccept()
 {
+  struct timeval sendTimeout;
+  uint32_t sendTimeoutMs;
   if (sock < 0)
       return -1;
   
@@ -186,13 +204,30 @@ int32_t trcSocketAccept()
     return -1;
   }
 
-  flags = fcntl(new_sd, F_GETFL, 0);
-  if (flags == SOCKET_ERROR ||
-      fcntl(new_sd, F_SETFL, flags | O_NONBLOCK) == SOCKET_ERROR)
+  sendTimeoutMs = (TRC_CFG_CTRL_TASK_DELAY > 0) ? TRC_CFG_CTRL_TASK_DELAY : 1;
+  sendTimeout.tv_sec = sendTimeoutMs / 1000;
+  sendTimeout.tv_usec = (sendTimeoutMs % 1000) * 1000;
+
+  if (setsockopt(new_sd, SOL_SOCKET, SO_SNDTIMEO, &sendTimeout,
+      sizeof(sendTimeout)) == SOCKET_ERROR)
   {
-	  closesocket(new_sd);
-	  new_sd = -1;
-	  return -1;
+    closesocket(new_sd);
+    new_sd = -1;
+    return -1;
+  }
+
+  /* Disable Nagle on the trace socket. Trace pages are small (<=500 bytes) and
+     latency-sensitive; Nagle + the host's delayed-ACK introduce ~40 ms stalls
+     that overflow the recorder's page buffer and cause gaps in the timeline. */
+  {
+    int tcpNoDelay = 1;
+    if (setsockopt(new_sd, IPPROTO_TCP, TCP_NODELAY, &tcpNoDelay,
+        sizeof(tcpNoDelay)) == SOCKET_ERROR)
+    {
+      closesocket(new_sd);
+      new_sd = -1;
+      return -1;
+    }
   }
 
   if (is_inited == 1) {

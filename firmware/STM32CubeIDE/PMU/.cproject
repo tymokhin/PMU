@@ -109,7 +109,7 @@
 						<entry excluding="cyclone_tcp/syslog|cyclone_tcp/ntp|cyclone_tcp/netbios|cyclone_tcp/nat|cyclone_tcp/coap|cyclone_tcp/dhcp|cyclone_tcp/dns|cyclone_tcp/drivers/loopback|cyclone_tcp/web_socket|cyclone_tcp/tftp|cyclone_tcp/sntp|cyclone_tcp/smtp|cyclone_tcp/ppp|cyclone_tcp/nts|cyclone_tcp/mqtt_sn|cyclone_tcp/mqtt|cyclone_tcp/modbus|cyclone_tcp/mld|cyclone_tcp/mibs|cyclone_tcp/mdns|cyclone_tcp/llmnr|cyclone_tcp/lldp|cyclone_tcp/ipv6|cyclone_tcp/http|cyclone_tcp/ftp|cyclone_tcp/dns_sd|cyclone_tcp/dhcpv6|cyclone_tcp/snmp|cyclone_tcp/igmp|common/fs_port_rl_fs.c|common/fs_port_posix.c|common/fs_port_fatfs.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="CycloneTCP"/>
 						<entry excluding="SD" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Device"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
-						<entry excluding="Kernel/portable/MemMang/heap_5.c|Kernel/portable/MemMang/heap_3.c|Kernel/portable/MemMang/heap_2.c|Kernel/portable/MemMang/heap_1.c|Kernel/portable/Common" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FreeRTOS"/>
+						<entry excluding="Kernel/portable/MemMang/heap_4.c|Kernel/portable/MemMang/heap_3.c|Kernel/portable/MemMang/heap_2.c|Kernel/portable/MemMang/heap_1.c|Kernel/portable/Common" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FreeRTOS"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Helper"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Tracealyzer4"/>
 					</sourceEntries>
@@ -221,7 +221,7 @@
 						<entry excluding="cyclone_tcp/syslog|cyclone_tcp/ntp|cyclone_tcp/netbios|cyclone_tcp/nat|cyclone_tcp/coap|cyclone_tcp/dhcp|cyclone_tcp/dns|cyclone_tcp/drivers/loopback|cyclone_tcp/web_socket|cyclone_tcp/tftp|cyclone_tcp/sntp|cyclone_tcp/smtp|cyclone_tcp/ppp|cyclone_tcp/nts|cyclone_tcp/mqtt_sn|cyclone_tcp/mqtt|cyclone_tcp/modbus|cyclone_tcp/mld|cyclone_tcp/mibs|cyclone_tcp/mdns|cyclone_tcp/llmnr|cyclone_tcp/lldp|cyclone_tcp/ipv6|cyclone_tcp/http|cyclone_tcp/ftp|cyclone_tcp/dns_sd|cyclone_tcp/dhcpv6|cyclone_tcp/snmp|cyclone_tcp/igmp|common/fs_port_rl_fs.c|common/fs_port_posix.c|common/fs_port_fatfs.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="CycloneTCP"/>
 						<entry excluding="SD" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Device"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
-						<entry excluding="Kernel/portable/MemMang/heap_5.c|Kernel/portable/MemMang/heap_3.c|Kernel/portable/MemMang/heap_2.c|Kernel/portable/MemMang/heap_1.c|Kernel/portable/Common" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FreeRTOS"/>
+						<entry excluding="Kernel/portable/MemMang/heap_4.c|Kernel/portable/MemMang/heap_3.c|Kernel/portable/MemMang/heap_2.c|Kernel/portable/MemMang/heap_1.c|Kernel/portable/Common" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FreeRTOS"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Helper"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Tracealyzer4"/>
 					</sourceEntries>

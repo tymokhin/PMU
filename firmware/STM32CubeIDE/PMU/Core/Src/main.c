@@ -115,11 +115,18 @@ static void MX_SPI6_Init(void);
 
 #define SDRAM_BANK1_BASE 0xC0000000UL
 #define SDRAM_BANK2_BASE 0xD0000000UL
-#define SDRAM_TEST_BANK_SIZE SDRAM_BANK_SIZE
-#define SDRAM_TEST_CONTIGUOUS_SIZE (1024U * 1024U)
-#define SDRAM_TEST_CACHE_LINE_SIZE 32U
-#define SDRAM_TEST_TASK_STACK_SIZE 512U
-#define SDRAM_TEST_TASK_PRIORITY (tskIDLE_PRIORITY + 1U)
+
+extern uint8_t _end;    // кінець усіх статичних даних
+extern uint8_t _estack; // верх RAM_D1
+#define INTERNAL_STACK_RESERVE ((uint32_t)(8U * 1024U))
+
+const HeapRegion_t xHeapRegions[] =
+{
+	//{ &_end, (uint32_t)(&_estack - &_end) - INTERNAL_STACK_RESERVE },
+	{ (uint8_t *) SDRAM_BANK1_BASE, SDRAM_BANK_SIZE },
+	//{ (uint8_t *) SDRAM_BANK2_BASE, SDRAM_BANK_SIZE },
+	{ NULL, 0 }
+};
 
 
 /* USER CODE END 0 */
@@ -179,6 +186,7 @@ int main(void)
   MT48LC32M16_Init(&hsdram1, FMC_SDRAM_CMD_TARGET_BANK1_2);
   DBG_INFO("SDRAM init done\r\n");
 
+  vPortDefineHeapRegions(xHeapRegions);
 
   if (net_tcp_init("PMU") != NO_ERROR)
   {
@@ -190,8 +198,11 @@ int main(void)
   debugSystemInfoPrint();
 
 #if defined(DEBUG)
+  vTraceSetFilterMask(FilterGroup0);
+  vTraceSetFilterGroup(FilterGroup1);
   //vTraceEnable(TRC_START);
   vTraceEnable(TRC_INIT);
+  vTraceSetFilterGroup(FilterGroup0);
 #endif
 
   vTaskStartScheduler();
